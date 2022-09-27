@@ -100,11 +100,7 @@ node index.js
 <br />
 ![ExpressJS Server Working](Screenshots/expressjs-server-working.PNG)
 
-***Result Screenshot:***
-<br />
-![Security Group Firewall](Screenshots/firewall-rules.PNG)
-
-- Access the server from a browser using the server's IP Address and the port 5000.
+- Access the server from a browser using the server's IP Address (or localhost) and the port 5000.
 ```
 http://localhost:5000
 ```
