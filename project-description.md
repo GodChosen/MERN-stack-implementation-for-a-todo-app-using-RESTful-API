@@ -1,334 +1,690 @@
-## LEMP STACK IMPLEMENTATION
+## MERN STACK IMPLEMENTATION
 To ensure a successful completion of this project, here are some prerequisites:
 - Have VS Code and some of it's extensions installed.
-- Create AWS account and launch an EC2 Instance
-- Firewall rules with port 22 accessible from the internet (0.0.0.0)
+- Install VMware and create an Ubuntu (v22.04) linux virtual machine 
 - Create a GitHub account and create a personal access token (PAT)
 - Create OpenSSH key pair in your local system and use the public key to create SSH key in GitHub
 
-Below are the steps I followed to implement a LAMP STACK in AWS
-### 1.  Install NGINX Server and Update the Firewall Rule
-- Connect to the EC2 instance
-On my local PC, I opened the folder created above and saved the downloaded key from AWS. Then I launched my VS Code, clicked on Terminal and ran the following commands.
-```
-# Grant permission to access and use the key
-sudo chmod 400 devops-practice-key1.pem 
+Below are the steps I followed to implement a MERN STACK for a Todo application that uses a RESTful API.
 
-# ssh into the EC2 instance
-ssh -i devops-practice-key1.pem ubuntu@ec2-3-91-222-235.compute-1.amazonaws.com
-```
+### 1.  Configure Backend
+I followed the steps below to configure the backend
 
-- Install nginx server
-To install Nginx server, I had to update the apt packages first before using it to install Nginx. Below are the commands used: 
+- Install Node.js and NPM
+To install nodejs and npm and download the necessary package repository, I had to update the apt packages
 ```
-#update a list of packages in package manager
+# update ubuntu
 sudo apt update -y
 
-#run Nginx package installation
-sudo apt install nginx -y
+# upgrade ubuntu
+sudo apt upgrade
 
-#confirm that Nginx is running
-sudo systemctl status nginx
+# get the location of Node.js software from Ubuntu repositories
+curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+
+# install nodejs on the server
+sudo apt install nodejs -y 
+
+# confirm that Node.js and NPM are both installed
+node -v
+npm -v
 ```
 
-**Result screenshot:**
+- Setup for Application code
+```
+#create a new directory for the application project
+mkdir ToDo
+
+#confirm the directory is created
+ls -lih
+
+#change directory to the newly created one
+cd ToDo
+
+# initialize the project to create the package.json file
+npm init
+```
+
+***Result Screenshot:***
 <br />
-![Nginx Status](Screenshots/nginx-actively-running.PNG)
+![Backend Configuration](Screenshots/backend-configuration.PNG)
 
-- Confirm that Nginx server is rendering from within the EC2 instance
-`curl http://localhost:80`
+### 2.  Install ExpressJS Server
+I followed the steps below to install and configure ExpressJS:
 
-**Result Screenshot:**
+- use npm package installer to install ExpressJS
+```
+npm install express
+```
+
+- create a file index.js
+```
+touch index.js
+```
+
+- Install dotenv module using npm
+```
+npm install dotenv
+```
+
+- Open the index.js file with the command `vi index.js`, paste the code below, save, and close.
+```
+const express = require('express');
+require('dotenv').config();
+
+const app = express();
+
+const port = process.env.PORT || 5000;
+
+app.use((req, res, next) => {
+res.header("Access-Control-Allow-Origin", "\*");
+res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+next();
+});
+
+app.use((req, res, next) => {
+res.send('Welcome to Express');
+});
+
+app.listen(port, () => {
+console.log(`Server running on port ${port}`)
+});
+```
+
+- Start the server to confirm if it was properly configured.
+```
+node index.js
+```
+
+***Result Screenshot:***
 <br />
-![Working Nginx](Screenshots/working-nginx.PNG)
+![ExpressJS Server Working](Screenshots/expressjs-server-working.PNG)
 
-- Update the firewall rules
-To enable users to access the web server over the internet, I had to open port 80 (for HTTP traffic) using the AWS console. I created a new inbound rule in the security group attached to the EC2 instance with port 80 open to traffic from anywhere.
-
-**Result Screenshot:**
+***Result Screenshot:***
 <br />
 ![Security Group Firewall](Screenshots/firewall-rules.PNG)
 
-- Test if you can access Nginx server from the internet
-To test, I used the command `curl -s http://169.254.169.254/latest/meta-data/public-ipv4` to obtain the public IP address of my EC2 instance and then navigated to that IP address using the web browser of my local system.
-
-**Result Screenshot:**
+- Access the server from a browser using the server's IP Address and the port 5000.
+```
+http://localhost:5000
+```
+***Result Screenshot:***
 <br />
-![Nginx Accessible from Internet](Screenshots/nginx-in-webbrowser.PNG)
+![Security Group Firewall](Screenshots/expressjs-server-accessible.PNG)
 
-### 2.  Install MySQL Database
-I followed the steps below to install and configure MySQL:
+- Create routes that will define different endpoints that the ToDo app will depend on.
+The ToDo app should be able to perform the following actions: create tasks, display tasks' list, and delete completed task. Hence, we need to create routes for those distinct actions, as they will use different standard HTTP request methods: POST, GET, DELETE.
 
-- use apt package installer to install MySQL
 ```
-sudo apt install mysql-server -y
+# create a directory called routes
+mkdir routes
+
+# change to the routes directory
+cd routes
+
+# create and open a file api.js
+vi api.js
+
+# copy the code below into the file, save and close.
+const express = require ('express');
+const router = express.Router();
+
+router.get('/todos', (req, res, next) => {
+
+});
+
+router.post('/todos', (req, res, next) => {
+
+});
+
+router.delete('/todos/:id', (req, res, next) => {
+
+})
+
+module.exports = router;
 ```
 
-- Connect to the MySQL server as the administrative database user root
+### 3.  Create a Model
+We need to create a model to make our application interactive and to define our database schema, since we are using Mongodb
+
+- Install mongoose package to create a Schema and a model
 ```
-sudo mysql
+# change to the ToDo directory
+cd ..
+
+# use npm to install mongoose
+npm install mongoose
 ```
-**Result Screenshot:**
+
+- Create a directory called models, change to that directory, create and open the file todo.js
+```
+mkdir models && cd models && vi todo.js
+```
+
+- Copy and paste the code below into the file, save, and close
+```
+const mongoose = require('mongoose');
+const Schema = mongoose.Schema;
+
+// create schema for todo
+const TodoSchema = new Schema({
+    action: {
+        type: String,
+        required: [true, 'The todo text field is required']
+    }
+})
+
+// create model for todo
+const Todo = mongoose.model('todo', TodoSchema);
+
+module.exports = Todo;
+```
+
+- Update our routes from the file api.js in ‘routes’ directory to make use of the new model
+```
+# change to the routes directory
+cd ../routes
+
+# open the api.js file with `vi api.js` and delete the code inside with `:%d`. Then paste the code below into the file, save, and close
+const express = require ('express');
+const router = express.Router();
+const Todo = require('../models/todo');
+
+router.get('/todos', (req, res, next) => {
+
+// this will return all the data, exposing only the id and action field to the client
+    Todo.find({}, 'action')
+    .then(data => res.json(data))
+    .catch(next)
+});
+
+router.post('/todos', (req, res, next) => {
+    if(req.body.action){
+        Todo.create(req.body)
+        .then(data => res.json(data))
+        .catch(next)
+    }
+    else {
+        res.json({
+            error: "The input field is empty"
+        })
+    }
+});
+
+router.delete('/todos/:id', (req, res, next) => {
+    Todo.findOneAndDelete({"_id": req.params.id})
+    .then(data => res.json(data))
+    .catch(next)
+})
+
+module.exports = router;
+```
+
+### 4.  Create a MongoDB Database
+**a. Create a MongoDB database on mLab platform by signing up for a cluster shared free account.**
+
+- Create an account on navigating to the [link](https://www.mongodb.com/atlas-signup-from-mlab)
+- Create a free shared cluster
+- Create a user and password
+- Allow access to the MongoDB database from anywhere (ideal for test purpose)
 <br />
-![MySQL Connection Success](Screenshots/mysql-connection.PNG)
+![MongoDB Network Access](Screenshots/mongodb-network-access.PNG)
 
-- Set password for the system root user and exit the shell
-```
-#set password
-ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY 'PassWord.1';
-
-#exit shell
-exit
-```
-
-- Run a security script that comes pre-installed with MySQL. This script will remove some insecure default settings and lock down access to your database system.
-```
-sudo mysql_secure_installation
-```
-
-- To configure the VALIDATE PASSWORD PLUGIN, select Yes when prompted. If the feature is enabled, passwords which don’t match the specified criteria will be rejected by MySQL with an error.
-
-- Set the MySQL root password.
-
-- Press Y and hit the ENTER key when prompted to change the root password, remove some anonymous users and the test database, disable remote root logins, and load these new rules so that MySQL immediately respects the changes you have made.
-
-- Test logging into the MySQL console
-```
-sudo mysql -p
-```
-
-**Result Screenshot:**
+- Create a MongoDB database and collection inside mLab
 <br />
-![MySQL Login Success](Screenshots/mysql-login.PNG)
+![MongoDB Database Created](Screenshots/mongodb-database-created.PNG)
+<br />
+![MongoDB Database Created](Screenshots/mongodb-database-collection-created.PNG)
 
-**Note:** At the time of this writing, the native MySQL PHP library mysqlnd doesn’t support caching_sha2_authentication, the default authentication method for MySQL 8. For that reason, when creating database users for PHP applications on MySQL 8, you’ll need to make sure they’re configured to use mysql_native_password instead.
-
-### 3.  Install PHP
-To have PHP working as needed with Nginx, I had to install these two packages: 'PHP fastCGI process manager' (php-fpm) and a PHP modulethat allows PHP to communicate with MySQL-based databases (php-mysql).
-
-- Install the needed packages
+**b. Connect the ToDo application to the MongoDB Database**
+- Create a .env file in the Todo directory
 ```
-sudo apt install -y php-fpm php-mysql
+touch .env
 ```
 
-**Result Screenshot:**<br />
-![PHP Working](Screenshots/php-installed.PNG)
-
-### 4.  Configure Nginx to use PHP processor
-To configure Nginx to use PHP processor, below are the steps I followed:
-
-- Create a directory called myconsult
+- Open the file and add the connection string to access the database
 ```
-sudo mkdir /var/www/myconsult
+# open the file
+vi .env
+
+#add the connection string below to the file
+DB = 'mongodb+srv://<username>:<password>@<network-address>/<dbname>?retryWrites=true&w=majority
 ```
 
-- Assign ownership of the directory to my current user
+*To get the connection string, follow the guide below:*
+- navigate to the database cluster page and click on Connect
+![Click Connect](Screenshots/connection-string-1.PNG)
+
+- choose connect your application from the options
+![Connect your application](Screenshots/connection-string-2.PNG)
+
+- copy the displayed connection string and replace the password with your choice password
+![Connection String](Screenshots/connection-string-3.PNG)
+
+**Update the index.js to reflect the use of .env so that Node.js can connect to the database.**
 ```
-sudo chown -R $USER:$USER /var/www/myconsult
+# open the index.js file
+vi index.js
+
+# use `:%d` to delete the content and replace with the below code
+const express = require('express');
+const bodyParser = require('body-parser');
+const mongoose = require('mongoose');
+const routes = require('./routes/api');
+const path = require('path');
+require('dotenv').config();
+
+const app = express();
+
+const port = process.env.PORT || 5000;
+
+//connect to the database
+mongoose.connect(process.env.DB, { useNewUrlParser: true, useUnifiedTopology: true })
+.then(() => console.log(`Database connected successfully`))
+.catch(err => console.log(err));
+
+//since mongoose promise is depreciated, we overide it with node's promise
+mongoose.Promise = global.Promise;
+
+app.use((req, res, next) => {
+res.header("Access-Control-Allow-Origin", "\*");
+res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+next();
+});
+
+app.use(bodyParser.json());
+
+app.use('/api', routes);
+
+app.use((err, req, res, next) => {
+console.log(err);
+next();
+});
+
+app.listen(port, () => {
+console.log(`Server running on port ${port}`)
+});
 ```
 
-- Create and open a new configuration file in Nginx’s sites-available directory
+- Start the server 
 ```
-sudo vi /etc/nginx/sites-available/myconsult
+node index.js
+```
+***Result Screenshot:***
+![Connection String](Screenshots/database-connected-successfully.PNG)
+
+**Testing Backend Code without Frontend using RESTful API**
+So far we have written backend part of our To-Do application, and configured a database, but we do not have a frontend UI yet. We need ReactJS code to achieve that. But during development, we will need a way to test our code using RESTfulL API. Therefore, we will need to make use of some API development client to test our code.
+
+- Postman was used for the test and the result is below:
+***Test and Result Screenshot:***
+![Postman Test - Post](Screenshots/postman-post-test.PNG)
+![Postman Test - Get](Screenshots/postman-get-test.PNG)
+![Postman Test - Delete](Screenshots/postman-delete-test.PNG)
+
+### 5. Create Frontend Server
+- Start the frontend by scaffolding the ToDo app
+```
+# create the client folder 
+npx create-react-app client
+
+# confirm the client folder is created
+ls | grep 'client'
+```
+- Install the needed dependencies to run the react app
+```
+# install concurrently for simultaneously running more than one command
+npm install concurrently --save-dev
+
+#install nodemon to run and monitor the server
+npm install nodemon --save-dev
 ```
 
-- Paste the following configurations inside the configuration file, save and close.
+- Open the package.json file in the ToDo directory. Change the highlighted part of the below screenshot and replace with the code below
 ```
-#/etc/nginx/sites-available/myconsult
+"scripts": {
+"start": "node index.js",
+"start-watch": "nodemon index.js",
+"dev": "concurrently \"npm run start-watch\" \"cd client && npm start\""
+},
+```
+![Highlighted Code for Change](Screenshots/change-the-highlighted-code.PNG)
 
-server {
-    listen 80;
-    root /var/www/myconsult;
+- Configure Proxy in the package.json file in the client directory
+```
+# change directory to ‘client’
+cd client
 
-    index index.html index.htm index.php;
+# open the package.json file
+vi package.json
 
-    location / {
-        try_files $uri $uri/ =404;
+#  add the key value pair below in the package.json file to make it possible to access the application directly from the browser by simply calling the server url
+"proxy": "http://localhost:5000"
+```
+
+***run the code below from the ToDo directory to open and start running the app on localhost:3000***
+```
+npm run dev
+```
+![React Server Running](Screenshots/react-server-running.PNG)
+<br />
+![React Server Accessible](Screenshots/react-server-accessible.PNG)
+
+- Create React Components for your app
+One of the advantages of react is that it makes use of components, which are reusable and also makes code modular. For our Todo app, there will be two stateful components and one stateless component. From your Todo directory, run the following code.
+```
+# change to 'client/src' directory
+cd client/src
+
+# create another directory called components and change directory to it
+mkdir components && cd components
+
+# create three files: Input.js, ListTodo.js and Todo.js
+touch Input.js ListTodo.js Todo.js
+
+# open Input.js file
+vi Input.js
+
+# copy and paste the following code, save, and close
+import React, { Component } from 'react';
+import axios from 'axios';
+
+class Input extends Component {
+
+    state = {
+        action: ""
     }
 
-    location ~ \.php$ {
-        include snippets/fastcgi-php.conf;
-        fastcgi_pass unix:/var/run/php/php8.1-fpm.sock;
-     }
+    addTodo = () => {
+        const task = { action: this.state.action }
 
-    location ~ /\.ht {
-        deny all;
+        if (task.action && task.action.length > 0) {
+            axios.post('/api/todos', task)
+                .then(res => {
+                    if (res.data) {
+                        this.props.getTodos();
+                        this.setState({ action: "" })
+                    }
+                })
+                .catch(err => console.log(err))
+        } else {
+            console.log('input field required')
+        }
+
     }
 
+    handleChange = (e) => {
+        this.setState({
+            action: e.target.value
+        })
+    }
+
+    render() {
+        let { action } = this.state;
+        return (
+            <div>
+                <input type="text" onChange={this.handleChange} value={action} />
+                <button onClick={this.addTodo}>add todo</button>
+            </div>
+        )
+    }
+}
+
+export default Input
+```
+
+- Install Axios
+ Axios is a Promise based HTTP client for the browser and node.js, which would be used for this project. Follow below steps to install it.
+```
+# move to the clients directory
+cd ../..
+
+# install Axios
+npm install axios
+
+# go to ‘components’ directory
+cd src/components
+
+# open your ListTodo.js
+vi ListTodo.js
+
+# in the ListTodo.js copy and paste the following code 
+import React from 'react';
+
+const ListTodo = ({ todos, deleteTodo }) => {
+
+    return (
+        <ul>
+            {
+                todos &&
+                    todos.length > 0 ?
+                    (
+                        todos.map(todo => {
+                            return (
+                                <li key={todo._id} onClick={() => deleteTodo(todo._id)}>{todo.action}</li>
+                            )
+                        })
+                    )
+                    :
+                    (
+                        <li>No todo(s) left</li>
+                    )
+            }
+        </ul>
+    )
+}
+
+export default ListTodo
+
+# open ToDo.js, copy and paste the code below, save and close
+import React, { Component } from 'react';
+import axios from 'axios';
+
+import Input from './Input';
+import ListTodo from './ListTodo';
+
+class Todo extends Component {
+
+    state = {
+        todos: []
+    }
+
+    componentDidMount() {
+        this.getTodos();
+    }
+
+    getTodos = () => {
+        axios.get('/api/todos')
+            .then(res => {
+                if (res.data) {
+                    this.setState({
+                        todos: res.data
+                    })
+                }
+            })
+            .catch(err => console.log(err))
+    }
+
+    deleteTodo = (id) => {
+
+        axios.delete(`/api/todos/${id}`)
+            .then(res => {
+                if (res.data) {
+                    this.getTodos()
+                }
+            })
+            .catch(err => console.log(err))
+
+    }
+
+    render() {
+        let { todos } = this.state;
+
+        return (
+            <div>
+                <h1>My Todo(s)</h1>
+                <Input getTodos={this.getTodos} />
+                <ListTodo todos={todos} deleteTodo={this.deleteTodo} />
+            </div>
+        )
+
+    }
+}
+
+export default Todo;
+```
+
+**Make little adjustment to the react code by modifying the App.js, App.css, and index.css files in the 'src' directory**
+
+- change to the src directory
+```
+cd ..
+```
+
+- open the App.js file and copy the code below into it
+```
+import React from 'react';
+
+import Todo from './components/Todo';
+import './App.css';
+
+const App = () => {
+    return (
+        <div className="App">
+            <Todo />
+        </div>
+    );
+}
+
+export default App;
+```
+
+- open the App.css file, copy and paste the following code, save, and close
+```
+.App {
+    text-align: center;
+    font-size: calc(10px + 2vmin);
+    width: 60%;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+input {
+    height: 40px;
+    width: 50%;
+    border: none;
+    border-bottom: 2px #101113 solid;
+    background: none;
+    font-size: 1.5rem;
+    color: #787a80;
+}
+
+input:focus {
+    outline: none;
+}
+
+button {
+    width: 25%;
+    height: 45px;
+    border: none;
+    margin-left: 10px;
+    font-size: 25px;
+    background: #101113;
+    border-radius: 5px;
+    color: #787a80;
+    cursor: pointer;
+}
+
+button:focus {
+    outline: none;
+}
+
+ul {
+    list-style: none;
+    text-align: left;
+    padding: 15px;
+    background: #171a1f;
+    border-radius: 5px;
+}
+
+li {
+    padding: 15px;
+    font-size: 1.5rem;
+    margin-bottom: 15px;
+    background: #282c34;
+    border-radius: 5px;
+    overflow-wrap: break-word;
+    cursor: pointer;
+}
+
+@media only screen and (min-width: 300px) {
+    .App {
+        width: 80%;
+    }
+
+    input {
+        width: 100%
+    }
+
+    button {
+        width: 100%;
+        margin-top: 15px;
+        margin-left: 0;
+    }
+}
+
+@media only screen and (min-width: 640px) {
+    .App {
+        width: 60%;
+    }
+
+    input {
+        width: 50%;
+    }
+
+    button {
+        width: 30%;
+        margin-left: 10px;
+        margin-top: 0;
+    }
 }
 ```
 
-- Link to the config file from Nginx's sites-enabled directory to activate the configuration
+- open the index.css file, copy and paste the following code, save, and close
 ```
-sudo ln -s /etc/nginx/sites-available/myconsult /etc/nginx/sites-enabled/
-```
-
-- Check for syntax errors in configuration
-```
-sudo nginx -t
-```
-
-**Result Screenshot:**<br />
-![Nginx Configuration Successful](Screenshots/nginx-configuration-successful.PNG)
-
-- Disable default Nginx host that is currently configured to listen on port 80
-```
-sudo unlink /etc/nginx/sites-enabled/default
-```
-
-- Reload Nginx for the changes to take effect
-```
-sudo systemctl reload nginx
-```
-
-- Create an index.html file in the root directory of my website '/var/www/myconsult/'
-```
-sudo echo 'Hello LEMP from hostname' $(curl -s http://169.254.169.254/latest/meta-data/public-hostname) 'with public IP' $(curl -s http://169.254.169.254/latest/meta-data/public-ipv4) > /var/www/myconsult/index.html
-```
-
-- Test if everything worked as expected by naviagting to the address: http://3.91.222.235:80
-
-**Result Screenshot:**<br />
-![Nginx/PHP Working](Screenshots/nginx-php-configuration-working.PNG)
-
-
-### 5.  Testing PHP with Nginx
-To test if .php files can be handled by PHP processor, I performed the following:
-
-- Create and open an info.php file
-```
-sudo vi /var/www/myconsult/info.php
-```
-
-- Paste the following configuration inside the file, save and close it
-```
-<?php
-phpinfo();
-```
-
-- Tested if I could access the page via my web browser
-```
-http://server_IP/info.php 
-```
-In my case:
-```
-http://3.91.222.235/info.php
-```
-
-**Result Screenshot:**<br />
-![PHP Page Working on Browser](Screenshots/php-page-working-on-browser.PNG)
-
-**Note:** Use the command below to remove the info.php file from the website root directory when done, as it exposes key information about the PHP environment.<br />
-```
-sudo rm /var/www/myconsult/info.php
-```
-
-### 5.  Retrieving Data from MySQL Database with PHP
-To achieve the aim in this section, I created a test database (DB) with simple "To do list" and configured access to it, so the Nginx website would be able to query data from the DB and display it.
-
-**Note:** At the time of implementing this project, the native MySQL PHP library mysqlnd doesn’t support caching_sha2_authentication, the default authentication method for MySQL 8. We’ll need to create a new user with the mysql_native_password authentication method in order to be able to connect to the MySQL database from PHP.
-
-- Connect to the MySQL console using the root account
-```
-sudo mysql
-```
-
-- Create a new Database 'demo_db'
-```
-CREATE DATABASE `demo_db`;
-```
-
-- Create a new user 'demo_user' with password 'demo_password'
-```
-CREATE USER 'demo_user'@'%' IDENTIFIED WITH mysql_native_password BY 'demo_password';
-```
-
-- Give the demo_user permission with full privilege to access the database and exit MySQL
-```
-#grant user permission
-GRANT ALL ON demo_db.* TO 'demo_user'@'%';
-
-#exit MySQL
-exit
-```
-
-- To test if the newly created user has full permission, log in to the MySQL console using the user credentials and then run different queries
-
-```
-#login to demo_db
-mysql -u demo_user -p
-
-#confirm access to demo_db
-SHOW DATABASES;
-
-#create a test table 'demo_table'
-CREATE TABLE demo_db.demo_table (
-    item_id INT AUTO_INCREMENT,
-    content VARCHAR(255),
-    PRIMARY KEY(item_id)
-);
-
-#insert few rows of content in the demo_table
-INSERT INTO demo_db.demo_table (content) VALUES ("My first important item");
-INSERT INTO demo_db.demo_table (content) VALUES ("My second important item");
-INSERT INTO demo_db.demo_table (content) VALUES ("My third important item");
-INSERT INTO demo_db.demo_table (content) VALUES ("My fourth important item");
-
-#confirm that the data was successfully saved to your table
-SELECT * FROM demo_db.demo_table;
-```
-**Result Screenshot: Database Created**<br />
-![Database Created](Screenshots/database-created.PNG)
-
-**Result Screenshot: Data saved successfully**<br />
-![Data Saved Successfully](Screenshots/data-saved-successfully.PNG)
-
-- Exit MySQL Database
-```
-exit
-```
-
--  Create a PHP script that will connect to MySQL and query for your content
-To achieve my aim, I created a new PHP file 'data.php' in the custom web root directory.
-```
-sudo vi /var/www/myconsult/data.php
-```
-
-- Paste the following content inside the file, save and close it
-```
-<?php
-$user = "demo_user";
-$password = "demo_password";
-$database = "demo_db";
-$table = "demo_table";
-
-try {
-  $db = new PDO("mysql:host=localhost;dbname=$database", $user, $password);
-  echo "<h2>TODO</h2><ol>";
-  foreach($db->query("SELECT content FROM $table") as $row) {
-    echo "<li>" . $row['content'] . "</li>";
-  }
-  echo "</ol>";
-} catch (PDOException $e) {
-    print "Error!: " . $e->getMessage() . "<br/>";
-    die();
+body {
+    margin: 0;
+    padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen",
+        "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
+        sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    box-sizing: border-box;
+    background-color: #282c34;
+    color: #787a80;
 }
+
+code {
+    font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New",
+        monospace;
+}
+``` 
+
+- change to the Todo directory
+```
+cd ../..
 ```
 
-- Tested if I could access the data via my web browser
+- start the server 
 ```
-http://server_IP/data.php 
+npm run dev
 ```
-In my case:
-```
-http://3.91.222.235/data.php
-```
+![Working React Frontend](Screenshots/working-react-frontend.PNG)
 
-**Result Screenshot:**<br />
-![PHP Retrieving Data from DB](Screenshots/php-retrieving-data-from-db.PNG)
-
-
-Credit: [This guide was inspired by Digital Ocean](https://www.digitalocean.com/community/tutorials/how-to-install-linux-nginx-mysql-php-lemp-stack-on-ubuntu-20-04)
+Credit: 
+- [This guide was inspired by Digital Ocean](https://www.digitalocean.com/community/tutorials/getting-started-with-the-mern-stack)
+- [Educative.io](https://www.educative.io/edpresso/what-is-mern-stack)
 
 
 
