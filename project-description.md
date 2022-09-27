@@ -313,11 +313,11 @@ node index.js
 So far we have written backend part of our To-Do application, and configured a database, but we do not have a frontend UI yet. We need ReactJS code to achieve that. But during development, we will need a way to test our code using RESTfulL API. Therefore, we will need to make use of some API development client to test our code.
 
 - Postman was used for the test and the result is below: <br />
-***Test and Result Screenshot: Post Request***
-![Postman Test - Post](Screenshots/postman-post-test.PNG) 
-***Test and Result Screenshot: Get Request***
-![Postman Test - Get](Screenshots/postman-get-test.PNG)
-***Test and Result Screenshot: Delete Request***
+***Test and Result Screenshot: Post Request*** <br />
+![Postman Test - Post](Screenshots/postman-post-test.PNG) <br />
+***Test and Result Screenshot: Get Request*** <br />
+![Postman Test - Get](Screenshots/postman-get-test.PNG) <br />
+***Test and Result Screenshot: Delete Request*** <br />
 ![Postman Test - Delete](Screenshots/postman-delete-test.PNG)
 
 ### 5. Create Frontend Server
